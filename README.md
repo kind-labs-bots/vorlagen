@@ -9,7 +9,8 @@ Chief-of-Staff-Vorlage von Kind Labs (Deutsch und Englisch).
 - `vorlagen/chief-of-staff/en/manifest.md` und `payload-v1.7.0.md`
 - `vorlagen/chief-of-staff/{de,en}/manifest-v1.7.1.md` und `payload-v1.7.1.md` (folgt auf 1.7.0; wird erst nach 1.7.0 zur aktuellen `manifest.md`)
 - `skript/pruefe_update.py` — Prüfskript, das ein Update annimmt oder ablehnt
-- `skript/kindlabs-update-pruefen.SKILL.md` — Anleitung für den Vorlagen-Bot (nicht auf der Allowlist)
+- `skript/kindlabs-update-pruefen.SKILL.md` — Anleitung für den Vorlagen-Bot, zweisprachig DE/EN und in beiden Vorlagen byte-gleich (nicht auf der Allowlist): Ersteinrichtung des Grundprompts, Ablegen des Prüfskripts, Prüfen und Extrahieren
+- `vorlagen/chief-of-staff/{de,en}/grundprompt-v1.7.0.md` — Grundprompt v1.7.0; die Vorlage holt ihn im ersten Gespräch und prüft ihn gegen den SHA-256 im Skill (siehe „Grundprompt-Dateien“)
 - `kern/` — Abschnitt „Updates von Kind Labs“ / „Updates from Kind Labs“ (harter Kern)
 
 Öffentliche Manifest-URL, Branch `release`:
@@ -28,7 +29,7 @@ Kern-Update still ohne weitere Updates lassen.
 |---|---|
 | skript/pruefe_update.py | `8b7a31e41ed88813458e3cdbe733bd2663225e6a3fc880f6fc791b784f6c8640` |
 | skript/LICENSE | `d6dbdc3c4f60290732d8c0eeb102b70e9ea52ca2f3277f43967ec7230f4fc712` |
-| skript/kindlabs-update-pruefen.SKILL.md | `4bc7a1668d10c9adb2c90258bc66c8613b7374ed4b9c3457dbcc1fc6fc309e80` |
+| skript/kindlabs-update-pruefen.SKILL.md | `1317e817277fb589a04cc63fbe496fc962ddffe75aa7f970956495e70d3f4349` |
 | vorlagen/.../de/manifest.md | `1454109406199026131eef51a7037ede7b903f13594bdb54502e2322f2107eb6` |
 | vorlagen/.../de/payload-v1.7.0.md | `d6118d0aeddd4bd093da1068c60e4a42ccc8210be4cdff34b2842d3b814a174a` |
 | vorlagen/.../de/manifest-v1.7.1.md | `cb35c10130379e291bf9338c64f4c1f4db66d82f895c7a25f770b3b927d3b028` |
@@ -37,9 +38,25 @@ Kern-Update still ohne weitere Updates lassen.
 | vorlagen/.../en/payload-v1.7.0.md | `a3101e9186c3c05f82838b30ae225a0b60dd96dedc3c48367b4d9ce8b36c97e9` |
 | vorlagen/.../en/manifest-v1.7.1.md | `01ebe6e064a8feffc420eb6c6b836552d0be487056868124e6fd808ae5b24573` |
 | vorlagen/.../en/payload-v1.7.1.md | `367ae37267c349d227fd95ae1b0efad90162a8e8e28cbeb37e685fe20fee985c` |
+| vorlagen/.../de/grundprompt-v1.7.0.md | `66bae99ca090f26fff13db3ef083d39759226e9ceda9b7ca5d6963cf041a6ed7` |
+| vorlagen/.../en/grundprompt-v1.7.0.md | `4891b4e1f150f1df9a7efd8370e9b1caccc435572fc0e490af8a796b6bf083ba` |
 
-Vor jedem Lauf prüft der Bot das Skript mit `sha256sum -c SUMS` im Ordner
-`/workspace/kindlabs/skript/8b7a31e41ed8`. Stimmen die Werte nicht, wird nichts eingespielt.
+Fehlt das Skript, holt der Bot es einmal per curl von der Commit-gebundenen Adresse
+`https://raw.githubusercontent.com/kind-labs-bots/vorlagen/250798b9282daf1a145b7ef36fa4aad83acce9ec/skript/pruefe_update.py`
+(nur https, keine Redirects, Timeout) und legt es nur ab, wenn sein SHA-256 dem Anker im harten Kern entspricht; vorhandene Dateien werden nie überschrieben. Vor jedem Lauf prüft er es mit `sha256sum -c` gegen eine Zeile, die er lokal aus dem Kern-Anker bildet, im Ordner
+`/workspace/kindlabs/skript/8b7a31e41ed8`. Die öffentliche `skript/SUMS` ist nur für Menschen. Stimmen die Werte nicht, wird nichts eingespielt.
+
+## Grundprompt-Dateien
+
+Eine Datei `grundprompt-v<x.y.z>.md` wird nie geändert und nie gelöscht.
+Eine neue Version heißt immer ein neuer Dateiname. Bestehende Vorlagen holen
+genau diese Datei und prüfen sie gegen einen festen SHA-256; eine geänderte
+oder fehlende Datei ließe jede neue Kopie dieser Version ohne Grundregeln
+starten. Abgerufen wird über den Branch `release`; nach dem Merge wird der Abruf an den Merge-Commit gebunden.
+
+Ein Revert der Änderung, mit der eine Grundprompt-Datei hinzugekommen ist, ist nur
+erlaubt, solange keine veröffentlichte Vorlage auf diese Datei zeigt; sonst
+widerspricht er dieser Regel.
 
 ## Was ein Update darf — und was nicht
 

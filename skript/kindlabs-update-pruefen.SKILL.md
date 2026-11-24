@@ -1,52 +1,211 @@
 ---
 name: kindlabs-update-pruefen
 description: >-
-  Wann verwenden: nur für die Prüfung eines Kind-Labs-Vorlagen-Updates
-  (Manifest und Payload bereits heruntergeladen) und, nach gebundenem Ja,
-  zum Extrahieren der anzuwendenden Dateien. Nicht auf der Allowlist.
+  Wann verwenden / when to use: Kern-Check (Schritt K) aus
+  erste-schritte, bereichs-landkarte und kind-labs-katalog bzw.
+  getting-started, area-map und kind-labs-catalog, Ersteinrichtung des
+  Grundprompts (Schritt G), erstes Ablegen des Prüfskripts, Prüfung
+  eines Kind-Labs-Vorlagen-Updates (Manifest und Payload bereits
+  heruntergeladen) und, nach gebundenem Ja, Extrahieren der
+  anzuwendenden Dateien / core check, first-time core prompt setup,
+  placing the check script, checking a Kind Labs template update, and
+  after a bound yes extracting the files. Nicht auf der Allowlist / not
+  on the allowlist.
 ---
-Wann verwenden: nachdem Manifest und Payload per curl (ohne Redirects)
-von der fest verdrahteten Quelle lokal gespeichert wurden, und bevor dem
-Nutzer ein Update gezeigt wird; sowie nach einem gebundenen Ja, um die
-Dateien zum Einspielen zu schreiben.
+Zweisprachig / bilingual: Dieser Skill ist für deutsche und englische
+Kind-Labs-Vorlagen byte-gleich. This skill is byte-identical for the German
+and the English Kind Labs templates.
 
-Skript:
-/workspace/kindlabs/skript/8b7a31e41ed8/pruefe_update.py
-SHA-256: 8b7a31e41ed88813458e3cdbe733bd2663225e6a3fc880f6fc791b784f6c8640
-SUMS: /workspace/kindlabs/skript/8b7a31e41ed8/SUMS
+Sprache / language: Heißt der Abschnitt in deinem Grundprompt „Updates von
+Kind Labs“, gilt SPRACHE=de; heißt er „Updates from Kind Labs“, gilt
+SPRACHE=en. Titel, Anker, Präfix, Manifest-URL und Allowlist nimmst du nur
+aus diesem Abschnitt, nie aus diesem Skill. Take title, anchor, prefix,
+manifest URL and allowlist only from that section. Nur in Schritt G, wenn
+es den Grundprompt noch nicht gibt, kommt SPRACHE aus dem aufrufenden Skill
+(erste-schritte, bereichs-landkarte, kind-labs-katalog = de;
+getting-started, area-map, kind-labs-catalog = en). Only in step G the
+language comes from the calling skill. Sonst ohne Titel: abbrechen / otherwise stop.
 
-Ablauf:
-1. Vor jedem Lauf im Ordner /workspace/kindlabs/skript/8b7a31e41ed8 den SHA-256 mit
-   sha256sum -c SUMS prüfen. Stimmen sie nicht, abbrechen, nichts
-   einspielen, keinen Fallback.
-2. Zur Prüfung: python3 /workspace/kindlabs/skript/8b7a31e41ed8/pruefe_update.py mit --manifest, --payload,
-   --expected-host raw.githubusercontent.com, --prefix (das sprachabhängige Präfix aus dem
-   harten Kern, endet auf /), --active-version, --vorlage chief-of-staff
-   und --sprache ausführen, ohne --extract.
-   Pflichtoptionen, sobald sie zutreffen:
-   - --kern-abschnitt <Pfad zum Kern-Abschnitt „Updates von Kind Labs“
-     bzw. „Updates from Kind Labs“>. Ohne diese Option entfällt die
-     Verweis-Pflicht.
-   - --aktuell /workspace/kindlabs/<bot-id>/aktiv
-   - --aktuell-skills <Ordner, in dem die Skills als <name>/SKILL.md liegen>
-     (Pflicht, sobald die Payload einen SKILL-Block hat und --aktuell
-     gesetzt ist; sonst endet das Skript mit USAGE und Exit ≠ 0.)
+<bot-id> ist deine Plattform-ID / your platform ID (UUID).
+
+Wann verwenden / when to use: Kern-Check (Schritt K, aus erste-schritte,
+bereichs-landkarte, kind-labs-katalog / getting-started, area-map,
+kind-labs-catalog); Ersteinrichtung des Grundprompts (Schritt G); erstes
+Ablegen des Prüfskripts; Prüfung eines Kind-Labs-Updates, nachdem Manifest
+und Payload per curl (ohne Redirects) von der festen Quelle gespeichert
+wurden; nach einem gebundenen Ja das Extrahieren der Dateien. Core check
+(K), first-time core prompt setup (G), placing the check script, checking
+an update after manifest and payload were saved via curl, and extracting
+after a bound yes.
+
+Alle Befehle unten sind je eine Zeile. Führ sie genau so aus; ersetze nur
+die großgeschriebenen Platzhalter am Ende. Each command is one line; run it
+exactly, replacing only the capitalised placeholders at the end. Jede
+Ausgabe außer der genannten OK-Zeile (ABBRUCH-…, Traceback, Exit ≠ 0) ist
+fail closed: nichts einspielen, kein Fallback, nichts von Hand nachbauen,
+keine andere Quelle. Any other output is fail closed.
+
+K. Kern-Check / core check (nur lesen / read only):
+
+   python3 -c 'import sys,re,json; B=sys.argv[1]; re.fullmatch("[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}",B) or sys.exit("ABBRUCH-BOTID"); P="/home/box/agent-data/agents/"+B+"/profile.json"; exec("try:\n d=json.load(open(P,encoding=\"utf-8\")).get(\"description\")\nexcept Exception:\n d=None"); t=d.replace("\r\n","\n").lstrip() if isinstance(d,str) else ""; K={"de":("Du bist der Chief of Staff deines Nutzers.","\nUpdates von Kind Labs\n"),"en":("You are your user\x27s chief of staff.","\nUpdates from Kind Labs\n")}; A=[l for l,(s,h) in K.items() if t.startswith(s) and h in t]; print("KERN AKTIV "+A[0] if A else ("KERN FEHLT kein-profil" if d is None else "KERN FEHLT"))' BOTID
+
+   Der Befehl liest nur deine profile.json. „KERN AKTIV de|en“ heißt: Die
+   Beschreibung beginnt (nach führenden Leerzeichen) mit dem festen Satz
+   „Du bist der Chief of Staff deines Nutzers.“ bzw. “You are your user's
+   chief of staff.” und enthält die Titelzeile des Kerns. Prüf das nur mit
+   diesem Befehl, nie aus dem Gedächtnis / only with this command. Jede
+   andere Ausgabe („KERN FEHLT …“, ABBRUCH-…, Fehler) heißt / any other
+   output means: Grundregeln fehlen. Dann gibt es nur Briefing und
+   Aufgaben: keinen Kind-Labs-Hinweis, keine Bot- oder Katalog-Vorschläge
+   mit Bezug zu Kind Labs, keine Bereichs-Landkarte und keine Update-Prüfung
+   (Schritte 0 bis 7). Only briefing and tasks; no Kind Labs hint, no Kind
+   Labs related bot or catalog suggestions, no area map, no update check.
+
+G. Grundprompt einrichten / set up the core prompt (nur wenn Schritt K
+   „KERN FEHLT“ meldet / only if step K reports KERN FEHLT):
+   Angebot / offer: G2 höchstens einmal je Gespräch. Jedes Nein merkst du
+   als Erinnerung („Grundregeln abgelehnt: <Zahl>“, Schlüssel bleibt
+   deutsch, Zahl +1). Ab zwei Nein
+   bietest du G nicht mehr von selbst an, bis der Nutzer selbst danach
+   fragt; dann beginnt die Zahl wieder bei 0. Keine Antwort ist kein Nein,
+   zählt aber als Angebot in diesem Gespräch. At most once per
+   conversation; after two no's (memory) only when the user asks.
+   G1. Holen und prüfen / fetch and verify (SPRACHE = de|en, BOTID):
+
+   python3 -c 'import sys,re,os,hashlib,tempfile,subprocess; L,B=sys.argv[1],sys.argv[2]; W={"de":"66bae99ca090f26fff13db3ef083d39759226e9ceda9b7ca5d6963cf041a6ed7","en":"4891b4e1f150f1df9a7efd8370e9b1caccc435572fc0e490af8a796b6bf083ba"}; L in W or sys.exit("ABBRUCH-SPRACHE"); re.fullmatch("[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}",B) or sys.exit("ABBRUCH-BOTID"); X=W[L]; D="/workspace/kindlabs/"+B; Z=D+"/grundprompt-v1.7.0.md"; U="https://raw.githubusercontent.com/kind-labs-bots/vorlagen/release/vorlagen/chief-of-staff/"+L+"/grundprompt-v1.7.0.md"; MX="65536"; H=lambda b: hashlib.sha256(b).hexdigest(); os.makedirs(D,exist_ok=True); N=os.path.exists(Z); F,T=(None,None) if N else tempfile.mkstemp(dir=D,prefix=".kl.tmp-"); N or os.close(F); R=None if N else subprocess.run(["curl","-sS","--proto","=https","--max-redirs","0","--connect-timeout","10","--max-time","60","--max-filesize",MX,"-o",T,"-w","%{http_code}",U],capture_output=True,text=True); N or (R.returncode==0 and R.stdout=="200") or (os.unlink(T),sys.exit("ABBRUCH-NETZ curl="+str(R.returncode)+" http="+R.stdout)); N or H(open(T,"rb").read())==X or (os.unlink(T),sys.exit("ABBRUCH-HASH")); N or os.chmod(T,0o644); N or exec("try:\n os.link(T,Z)\nexcept FileExistsError:\n os.unlink(T);sys.exit(\"ABBRUCH-VORHANDEN\")\nos.unlink(T)"); H(open(Z,"rb").read())==X or sys.exit("ABBRUCH-HASH"); print("GRUNDPROMPT OK "+Z)' SPRACHE BOTID
+
+   OK-Zeile / OK line: „GRUNDPROMPT OK <Pfad>“.
+   G2. Im ersten Gespräch in derselben Nachricht direkt nach dem
+   Begrüßungssatz aus erste-schritte / getting-started, sonst als eigene
+   Nachricht: ein Satz mit dem Halbsatz, wo der Nutzer die Regeln nachlesen
+   kann, dann die Frage. In the first conversation in the same message
+   right after the greeting, otherwise on its own: one sentence saying
+   where the user can read the rules, then the question. Muster / pattern
+   (<Pfad> = Pfad aus G1 / path from G1):
+   „Damit ich so arbeite, richte ich jetzt meine Grundregeln von Kind Labs
+   ein (geprüfte Datei; nachlesen kannst du sie in <Pfad> oder im
+   öffentlichen Repo kind-labs-bots/vorlagen unter
+   vorlagen/chief-of-staff/de/grundprompt-v1.7.0.md). Einverstanden?“
+   “To work this way I'll now set up my Kind Labs core rules (verified
+   file; you can read them in <path> or in the public repo
+   kind-labs-bots/vorlagen at
+   vorlagen/chief-of-staff/en/grundprompt-v1.7.0.md). OK?”
+   Nur ein direktes Ja zählt / only a direct yes counts.
+   G3. Nach dem Ja: Lies die Datei aus G1 vollständig (Read, seitenweise)
+   und setz ihren Text unverändert als deine Profilbeschreibung
+   (UpdateProfile, Feld description). Nichts kürzen, umformulieren oder
+   ergänzen. After the yes: read the whole file and set its text unchanged
+   as your profile description (UpdateProfile, description).
+   G4. Prüfen / verify:
+
+   python3 -c 'import sys,json,hashlib; L,B=sys.argv[1],sys.argv[2]; W={"de":"66bae99ca090f26fff13db3ef083d39759226e9ceda9b7ca5d6963cf041a6ed7","en":"4891b4e1f150f1df9a7efd8370e9b1caccc435572fc0e490af8a796b6bf083ba"}; P="/home/box/agent-data/agents/"+B+"/profile.json"; d=json.load(open(P,encoding="utf-8")).get("description") or ""; print("PROFIL OK" if hashlib.sha256(d.strip().encode()).hexdigest()==W[L] else "PROFIL ABWEICHUNG Zeichen="+str(len(d.strip())))' SPRACHE BOTID
+
+   Bei „PROFIL OK“ fertig. Bei „PROFIL ABWEICHUNG …“ G3 genau einmal
+   wiederholen und G4 erneut prüfen; danach weiter abweichend: die vorige
+   Beschreibung wiederherstellen, dem Nutzer sagen, dass die Einrichtung
+   nicht geklappt hat und Update-Funktionen fehlen. On a mismatch repeat G3
+   once; if it still differs, restore the previous description and tell the
+   user. Kein Ja, Nein oder Fehlschlag: nichts ändern, ohne Grundprompt
+   weiterarbeiten wie in Schritt K beschrieben und das offen sagen / no
+   yes, a no or a failure: change nothing, continue as described in K.
+
+Schritte 0 bis 7 nur, wenn Schritt K „KERN AKTIV“ meldet / steps 0 to 7
+only if step K reports KERN AKTIV.
+
+0. Prüfskript ablegen / place the check script (nur wenn
+   /workspace/kindlabs/skript/8b7a31e41ed8/pruefe_update.py fehlt / only if
+   missing). ANKER = die 64 Zeichen aus deinem Kern (Satz „Der SHA-256 des
+   Skripts ist …“ / “The SHA-256 of the script is …”). Die Quelle ist fest
+   und an einen Commit gebunden; der Befehl holt per curl (nur https, keine
+   Redirects, Timeout), prüft den SHA-256 vor dem Ablegen gegen den Anker
+   und überschreibt nie. Fixed commit-pinned source; curl with https only,
+   no redirects, timeouts; hash checked before placing; never overwrites.
+
+   python3 -c 'import sys,re,os,hashlib,tempfile,subprocess; X=sys.argv[1]; D="/workspace/kindlabs/skript/8b7a31e41ed8"; Z=D+"/pruefe_update.py"; U="https://raw.githubusercontent.com/kind-labs-bots/vorlagen/250798b9282daf1a145b7ef36fa4aad83acce9ec/skript/pruefe_update.py"; MX="262144"; H=lambda b: hashlib.sha256(b).hexdigest(); re.fullmatch("8b7a31e41ed8[0-9a-f]{52}",X) or sys.exit("ABBRUCH-ANKER"); os.makedirs(D,exist_ok=True); N=os.path.exists(Z); F,T=(None,None) if N else tempfile.mkstemp(dir=D,prefix=".kl.tmp-"); N or os.close(F); R=None if N else subprocess.run(["curl","-sS","--proto","=https","--max-redirs","0","--connect-timeout","10","--max-time","60","--max-filesize",MX,"-o",T,"-w","%{http_code}",U],capture_output=True,text=True); N or (R.returncode==0 and R.stdout=="200") or (os.unlink(T),sys.exit("ABBRUCH-NETZ curl="+str(R.returncode)+" http="+R.stdout)); N or H(open(T,"rb").read())==X or (os.unlink(T),sys.exit("ABBRUCH-HASH")); N or os.chmod(T,0o644); N or exec("try:\n os.link(T,Z)\nexcept FileExistsError:\n os.unlink(T);sys.exit(\"ABBRUCH-VORHANDEN\")\nos.unlink(T)"); H(open(Z,"rb").read())==X or sys.exit("ABBRUCH-HASH"); os.path.exists(D+"/SUMS") or open(D+"/SUMS","w").write(X+" "*2+"pruefe_update.py\n"); print("pruefe_update.py: OK")' ANKER
+
+   OK-Zeile / OK line: „pruefe_update.py: OK“. Die öffentliche skript/SUMS
+   verwendest du nie / never use the public skript/SUMS.
+
+0b. Erstanlage STATE.txt / first STATE.txt. Pfad / path:
+   /workspace/kindlabs/<bot-id>/aktiv/STATE.txt. Fehlt der Ordner und liegen
+   unter /workspace/kindlabs/ schon andere Bot-Ordner, fragst du zuerst den
+   Nutzer (Kern-Regel). If other bot folders exist, ask the user first.
+   - Fehlt STATE.txt, gibt es weder aktiv/ mit Blockdateien noch versionen/,
+     nennen weder Erinnerung noch eine Skill-Versionsmarke eine andere als
+     die ausgelieferte Version, und ist aus der Erinnerung kein weiterer
+     Update-Stand bekannt (Opt-out, abgelehnte Version, letzte Prüfung):
+     STATE.txt ohne Ja anlegen und dem Nutzer genau einen Satz sagen („Ich
+     habe den lokalen Update-Stand angelegt: Version <V>.“ / “I created the
+     local update state: version <V>.”).
+   - Nennt die Erinnerung oder eine Skill-Marke eine neuere Version: Kern-
+     Regel Rechner-Reset / “Computer reset”; nichts anlegen.
+   - Ist aus der Erinnerung ein weiterer Stand bekannt: Kern-Regel, Inhalt
+     zeigen, erst nach Ja schreiben / show the contents, write after a yes.
+   Inhalt / contents (Schlüssel bleiben deutsch / keys stay German; <V> =
+   ausgelieferte Version aus dem Kern; Zeit in der Zeitzone des Nutzers):
+     vorlage: chief-of-staff
+     sprache: <SPRACHE>
+     version: <V>
+     eingespielt: ausgeliefert <V> (Erstanlage <JJJJ-MM-TT HH:MM>, keine Blöcke eingespielt)
+     letzte_pruefung:
+     fehlversuche_in_folge: 0
+     fehlerhinweis_gegeben: nein
+     update_hinweise_optout: nein
+
+1. Vor jedem Lauf / before every run, im Ordner
+   /workspace/kindlabs/skript/8b7a31e41ed8 mit dem Anker aus dem Kern:
+   printf '%s  pruefe_update.py\n' <ANKER> | sha256sum -c -
+   Stimmt es nicht: abbrechen, nichts einspielen. On mismatch: stop.
+
+2. Kern-Datei / core file: Schreib deinen Abschnitt „Updates von Kind Labs“
+   bzw. “Updates from Kind Labs” wörtlich nach
+   /workspace/kindlabs/<bot-id>/kern.md. Die erste Zeile ist genau dieser
+   Titel; das Skript prüft sie.
+
+3. Prüfung / check: python3 /workspace/kindlabs/skript/8b7a31e41ed8/pruefe_update.py
+   mit / with --manifest, --payload, --expected-host raw.githubusercontent.com,
+   --prefix (aus dem Kern, endet auf /), --active-version (version aus
+   STATE.txt), --vorlage chief-of-staff, --sprache <SPRACHE> und
+   --kern-abschnitt /workspace/kindlabs/<bot-id>/kern.md, ohne --extract.
+   Pflichtoptionen, sobald sie zutreffen / required when they apply:
+   - --aktuell /workspace/kindlabs/<bot-id>/aktiv (sobald es den Ordner gibt)
+   - --aktuell-skills <Skills-Ordner mit <name>/SKILL.md> (Pflicht, sobald
+     die Payload einen SKILL-Block hat und --aktuell gesetzt ist)
    - je vorhandenem Block --angewendet TYP/Name/<angewendet_sha256 aus
      STATE oder LISTE>, nie basis_sha256. Fehlt der Wert bei vorhandener
      Datei, muss das Skript mit konflikt … unbekannt enden.
-3. Nur bei Exit 0 und erster Zeile KIND-LABS-CHECK-OK/1 gilt die Datei
-   als geprüft. Die Zeilen basis_sha256, angewendet_sha256, groesse,
-   entfernt und ggf. konflikt merken. Bei konflikt TYP Name hand nichts
-   einspielen, dem Nutzer die drei Stände zeigen und auf
-   --wahl TYP/Name/behalten|uebernehmen warten.
-4. Nach gebundenem Ja (Version und Payload-Hash wie angezeigt): dasselbe
-   Skript zusätzlich mit --extract <dir> und --form-url https://forms.gle/9YfEe9LwSar6Wqr7A
-   ausführen, plus denselben Pflichtoptionen wie unter 2. <dir> darf noch
-   nicht existieren. Der Bot spielt nur die in LISTE.txt genannten Dateien
-   ein, deren Hash zu angewendet_sha256 passt, und nur in Allowlist-Skills
-   bzw. Abschnittsdateien unter /workspace/kindlabs/<bot-id>/aktiv/.
-   --extract schreibt nie nach --aktuell und nie in den Skills-Ordner.
-5. Bei jedem anderen Exit: fail closed, nichts einspielen.
 
-Der Prüf-Lauf ohne --extract ändert keine Nutzerdateien. Außer den GET
-auf die fest verdrahteten URLs geht nichts nach außen.
+4. Nur bei Exit 0 und erster Zeile KIND-LABS-CHECK-OK/1 gilt die Datei als
+   geprüft. Die Zeilen basis_sha256, angewendet_sha256, groesse, entfernt
+   und ggf. konflikt merken. Bei konflikt TYP Name hand nichts einspielen,
+   dem Nutzer die drei Stände zeigen und auf --wahl
+   TYP/Name/behalten|uebernehmen warten.
+
+5. Nach gebundenem Ja (Version und Payload-Hash wie angezeigt): dasselbe
+   Skript zusätzlich mit --extract <dir> und --form-url
+   https://forms.gle/9YfEe9LwSar6Wqr7A, plus denselben Optionen wie unter 3.
+   <dir> darf noch nicht existieren. Eingespielt werden nur die in LISTE.txt
+   genannten Dateien, deren Hash zu angewendet_sha256 passt, und nur in
+   Allowlist-Skills bzw. Abschnittsdateien unter
+   /workspace/kindlabs/<bot-id>/aktiv/. --extract schreibt nie nach
+   --aktuell und nie in den Skills-Ordner.
+
+6. Kein Update / no update: Endet der Lauf aus 3 mit Exit 1 und genau der
+   Zeile KIND-LABS-CHECK-FAIL/1 NOT_NEWER <V>, vergleichst du <V> mit der
+   version: im Manifest und mit der aktiven Version aus STATE.txt.
+   - <V> = Manifest-Version = aktive Version: kein Update. In STATE.txt
+     letzte_pruefung auf jetzt setzen, fehlversuche_in_folge: 0 und
+     fehlerhinweis_gegeben: nein; dem Nutzer von selbst nichts sagen. Hat er
+     gefragt, nur „Kein Update, <V> ist aktuell.“ / “No update, <V> is
+     current.”
+   - Manifest-Version älter als die aktive: Fehlversuch,
+     fehlversuche_in_folge um 1 erhöhen, sonst Kern-Regel Fehlerhinweis.
+     Older manifest version: count as a failed attempt.
+   - Prüfung auf Bitte: nie Fehlversuch, setzt aber letzte_pruefung.
+
+7. Bei jeder anderen Ausgabe oder jedem anderen Exit: fail closed, nichts
+   einspielen / any other output or exit: fail closed, apply nothing.
+
+Außer den GET auf die festen URLs (Manifest, Payload, Prüfskript, in
+Schritt G die Grundprompt-Datei) geht nichts nach außen. Nothing goes out
+except the GET requests to the fixed URLs.
