@@ -1,0 +1,8 @@
+Copyright (c) 2026 Kind Labs
+
+Die Vorlagen-Texte, das README, die Kern-Abschnitte und die Skill-Anleitungen
+in diesem Repository sind urheberrechtlich geschützt, alle Rechte vorbehalten.
+Nutzung nur für Bots, die aus einer Kind-Labs-Vorlage erstellt wurden.
+
+Das Prüfskript skript/pruefe_update.py steht unter der MIT-Lizenz.
+Der Wortlaut steht in skript/LICENSE.
