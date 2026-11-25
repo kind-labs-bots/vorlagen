@@ -29,7 +29,7 @@ Kern-Update still ohne weitere Updates lassen.
 |---|---|
 | skript/pruefe_update.py | `8b7a31e41ed88813458e3cdbe733bd2663225e6a3fc880f6fc791b784f6c8640` |
 | skript/LICENSE | `d6dbdc3c4f60290732d8c0eeb102b70e9ea52ca2f3277f43967ec7230f4fc712` |
-| skript/kindlabs-update-pruefen.SKILL.md | `1317e817277fb589a04cc63fbe496fc962ddffe75aa7f970956495e70d3f4349` |
+| skript/kindlabs-update-pruefen.SKILL.md | `05f76358a9f65e747eb25186bef0ac2740385894135aae142b2acc706ca09f98` |
 | vorlagen/.../de/manifest.md | `1454109406199026131eef51a7037ede7b903f13594bdb54502e2322f2107eb6` |
 | vorlagen/.../de/payload-v1.7.0.md | `d6118d0aeddd4bd093da1068c60e4a42ccc8210be4cdff34b2842d3b814a174a` |
 | vorlagen/.../de/manifest-v1.7.1.md | `cb35c10130379e291bf9338c64f4c1f4db66d82f895c7a25f770b3b927d3b028` |
@@ -52,7 +52,7 @@ Eine Datei `grundprompt-v<x.y.z>.md` wird nie geändert und nie gelöscht.
 Eine neue Version heißt immer ein neuer Dateiname. Bestehende Vorlagen holen
 genau diese Datei und prüfen sie gegen einen festen SHA-256; eine geänderte
 oder fehlende Datei ließe jede neue Kopie dieser Version ohne Grundregeln
-starten. Abgerufen wird über den Branch `release`; nach dem Merge wird der Abruf an den Merge-Commit gebunden.
+starten. Abgerufen wird über den Commit `bae12a395c7da573a68f6beb7e1a6df3ae7f80a0`.
 
 Ein Revert der Änderung, mit der eine Grundprompt-Datei hinzugekommen ist, ist nur
 erlaubt, solange keine veröffentlichte Vorlage auf diese Datei zeigt; sonst
