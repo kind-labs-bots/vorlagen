@@ -52,24 +52,24 @@ ALLOWED_ABSCHNITT_CANON = {
 }
 ALLOWED_SKILL = {
     "de": (
-        "morgen-briefing",
-        "entscheidungsvorlage",
-        "aussenkommunikation-pruefen",
-        "aufgaben-nachhalten",
-        "wochenrueckblick",
-        "bereichs-landkarte",
-        "erste-schritte",
-        "kind-labs-katalog",
+        "kl-cos-de-morgen-briefing",
+        "kl-cos-de-entscheidungsvorlage",
+        "kl-cos-de-aussenkommunikation-pruefen",
+        "kl-cos-de-aufgaben-nachhalten",
+        "kl-cos-de-wochenrueckblick",
+        "kl-cos-de-bereichs-landkarte",
+        "kl-cos-de-erste-schritte",
+        "kl-cos-de-katalog",
     ),
     "en": (
-        "morning-briefing",
-        "decision-memo",
-        "outbound-check",
-        "follow-ups",
-        "weekly-review",
-        "area-map",
-        "getting-started",
-        "kind-labs-catalog",
+        "kl-cos-en-morning-briefing",
+        "kl-cos-en-decision-memo",
+        "kl-cos-en-outbound-check",
+        "kl-cos-en-follow-ups",
+        "kl-cos-en-weekly-review",
+        "kl-cos-en-area-map",
+        "kl-cos-en-getting-started",
+        "kl-cos-en-catalog",
     ),
 }
 ALLOWED_PLACEHOLDER = b"{{KIND-LABS-FORMULAR}}"
@@ -127,6 +127,8 @@ PFLICHTSATZ_WIDERSPRUCH = {
 # UTF-8 bytes of the body without the title line, single trailing LF, after
 # form-URL substitution. Taken from vorlage-chief-of-staff-v1.6-entwurf.md
 # on 24.11.2026 for 1.6.0. Add a new inner map whenever a template ships.
+# 1.7.0 (Skill-Namen kl-cos-de-/kl-cos-en-): gemessen am 25.11.2026 nach derselben Regel gegen
+# grundprompt-v1.7.0-r2.md (Abschnitte) und den ausgelieferten Skill-Text ohne Kopf (Skills).
 # Used when --aktuell has no file for that block (typical first update).
 BASISGROESSEN = {
     "1.6.0": {
@@ -140,16 +142,30 @@ BASISGROESSEN = {
         ("ABSCHNITT", "About Kind Labs"): 3580,
     },
     "1.7.0": {
-        ("ABSCHNITT", "Über Kind Labs"): 4412,
-        ("SKILL", "kind-labs-katalog"): 8204,
-        ("ABSCHNITT", "About Kind Labs"): 4058,
-        ("SKILL", "kind-labs-catalog"): 7925,
-        ("ABSCHNITT", "Mitwachsen"): 3305,
         ("ABSCHNITT", "Arbeitsweise"): 589,
         ("ABSCHNITT", "Typische Aufgaben"): 431,
-        ("ABSCHNITT", "Growing with you"): 3118,
+        ("ABSCHNITT", "Mitwachsen"): 2949,
+        ("ABSCHNITT", "Über Kind Labs"): 4030,
         ("ABSCHNITT", "How you work"): 534,
         ("ABSCHNITT", "Typical tasks"): 365,
+        ("ABSCHNITT", "Growing with you"): 3118,
+        ("ABSCHNITT", "About Kind Labs"): 4035,
+        ("SKILL", "kl-cos-de-morgen-briefing"): 960,
+        ("SKILL", "kl-cos-de-entscheidungsvorlage"): 610,
+        ("SKILL", "kl-cos-de-aussenkommunikation-pruefen"): 657,
+        ("SKILL", "kl-cos-de-aufgaben-nachhalten"): 581,
+        ("SKILL", "kl-cos-de-wochenrueckblick"): 501,
+        ("SKILL", "kl-cos-de-bereichs-landkarte"): 2405,
+        ("SKILL", "kl-cos-de-erste-schritte"): 2998,
+        ("SKILL", "kl-cos-de-katalog"): 8324,
+        ("SKILL", "kl-cos-en-morning-briefing"): 887,
+        ("SKILL", "kl-cos-en-decision-memo"): 514,
+        ("SKILL", "kl-cos-en-outbound-check"): 608,
+        ("SKILL", "kl-cos-en-follow-ups"): 543,
+        ("SKILL", "kl-cos-en-weekly-review"): 446,
+        ("SKILL", "kl-cos-en-area-map"): 2179,
+        ("SKILL", "kl-cos-en-getting-started"): 2690,
+        ("SKILL", "kl-cos-en-catalog"): 8000,
     },
 }
 # Backward-compatible alias for callers/tests that still read the v1.6 map.
