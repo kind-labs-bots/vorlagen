@@ -96,6 +96,24 @@ Kind Labs bekommt durch ein Update keinen Zugang zu Konto, Computer oder Verlauf
 Die Prüfung holt nur die fest verdrahteten Dateien; dabei sieht der Host IP und
 Zeitpunkt. Mehr geht nicht nach außen.
 
+## Zugang und Notfallweg
+
+Änderungen an diesem Repository kommen nur über Pull Requests vom Bot-Konto
+`kindlabsio`. Es arbeitet mit einem fine-grained Token, der nur auf dieses
+eine Repository zugreifen darf (Contents und Pull requests). Andere Repositories
+oder Konten erreicht dieser Token nicht. Gemerged wird nur als Merge-Commit,
+Arbeits-Branches liegen unter `bot/*`.
+
+Notfall bei Verdacht, dass der Token abgeflossen ist (Kind Labs, Inhaber der Organisation):
+
+1. Token widerrufen: im Konto `kindlabsio` unter
+   `https://github.com/settings/personal-access-tokens` oder in der Organisation
+   unter Settings > Personal access tokens > Active tokens.
+2. Die Rolle von `kindlabsio` in der Organisation entfernen.
+3. Das Audit-Log der Organisation prüfen.
+4. Die letzten Merges auf `release` prüfen und Unerwartetes per Revert zurücknehmen
+   (Regel zu Grundprompt-Dateien oben beachten).
+
 ## Kontakt
 
 Fragen zur Vorlage: https://forms.gle/9YfEe9LwSar6Wqr7A
