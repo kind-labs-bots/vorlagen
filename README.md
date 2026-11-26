@@ -96,6 +96,44 @@ Kind Labs bekommt durch ein Update keinen Zugang zu Konto, Computer oder Verlauf
 Die Prüfung holt nur die fest verdrahteten Dateien; dabei sieht der Host IP und
 Zeitpunkt. Mehr geht nicht nach außen.
 
+## Linie kl-mkt (Vorlage marketing, de)
+
+Vorlage „Social-Media-Profi · by Kind Labs“: Sparringspartnerin für Social Media, Instagram zuerst. Proaktive erste Woche: Nach höchstens 3 kurzen Fragen liefert der Bot sofort verwendbare Entwürfe und bringt in den ersten 7 Tagen bei jedem Kontakt einen konkreten nächsten Vorschlag. Posten, Werbung, Geld und Routinen gibt es nur nach ausdrücklichem Ja. Beim allerersten Zug grüßt der Bot nur kurz und startet die ersten Schritte; vorher gibt es keinen Entwurf. Eigene Linie mit eigenem Prüfskript und eigenem Anker; die Chief-of-Staff-Linien oben bleiben unverändert.
+Name und Startsprache der Nutzerin stehen nie in diesem Repo. Der Kern liest sie aus der Nutzerschicht des Bots (optionaler Skill `nutzer-kl-mkt-vorbelegung`, kundenspezifisch, nicht öffentlich; nur Datenfelder Name, Startsprache, Begrüßungsfrage, weitere Personen, Anlässe, Bedarf); fehlt er, fragt der Bot beim ersten Kontakt neutral nach Namen und Sprache. Die Nutzerschicht regelt Namen, Sprache, Ton und Vorlieben; Grenzen und harter Kern gehen immer vor.
+
+Bekannte Abweichung: `BASISGROESSEN_MKT` im Prüfskript (Anker `9a4b484d2b5b`) nennt für `kl-mkt-de-erste-schritte` noch 1886 Bytes, den Stand vor Schritt 0. Der Wert wurde bewusst nicht nachgezogen, damit Anker und Commit `1d3560fa` stabil bleiben. Er wird nur genutzt, wenn die Ist-Datei fehlt, und erzeugt nur eine Warnung. Die Schrumpf-Warnung für diesen Skill greift dadurch erst unter etwa 943 statt etwa 1570 Zeichen. Weil ein Update den Anker nie ersetzt, bleibt das so bis zu einem neuen Skript-Hash; dann wird der Wert korrigiert. Skill-Updates sind ohnehin gesperrt.
+
+- `vorlagen/marketing/de/grundprompt-mkt-v1.0.0.md` — Grundprompt 1.0.0 (Profilbeschreibung beim Einrichten); wird nach der Regel unter „Grundprompt-Dateien“ nie geändert
+- `vorlagen/marketing/de/manifest-kl-mkt.md` und `payload-kl-mkt-v1.0.0.md` — aktuelle Fassung 1.0.0 (`folgt_auf: 0.0.0` nur für die Ersteinrichtung, nie als Update angeboten)
+- `vorlagen/marketing/de/manifest-kl-mkt-v1.0.1.md` und `payload-kl-mkt-v1.0.1.md` — Testupdate 1.0.1 (nur Abschnitt Typische Aufgaben) für den Abnahmetest; nicht über `manifest-kl-mkt.md` ausgeliefert
+- `skript/kl-mkt/pruefe_update.py` — Prüfskript der Linie (Allowlist marketing, Erkennung an Präfix plus Body-Marker, Basis-Hashes in STATE, Skill-Updates gesperrt)
+- `skript/kl-mkt/kl-mkt-de-update-pruefen.SKILL.md` — Referenzkopie des Update-Skills (nicht auf der Allowlist)
+- `skript/kl-mkt/SUMS` — nur für Menschen
+
+Manifest-URL (fest verdrahtet):
+`https://raw.githubusercontent.com/kind-labs-bots/vorlagen/release/vorlagen/marketing/de/manifest-kl-mkt.md`
+
+| Linie | Kern-Anker (Prüfskript) | Skript-Abruf über Commit | Manifest | Skill-Namen |
+|---|---|---|---|---|
+| kl-mkt | `9a4b484d2b5bab800b2f4c77a45e1a8ca8783de0e46bca10f27d38c05c2cb6e2` | `1d3560fa10e6c669e49a8db02d673d2eff8dbaea` | `marketing/de/manifest-kl-mkt.md` | `kl-mkt-de-…` |
+
+Fehlt das Skript, holt der Bot es einmal von
+`https://raw.githubusercontent.com/kind-labs-bots/vorlagen/1d3560fa10e6c669e49a8db02d673d2eff8dbaea/skript/kl-mkt/pruefe_update.py`
+(nur https, keine Redirects, Timeout) und legt es nur ab, wenn sein SHA-256 dem Anker entspricht, im Ordner
+`/workspace/kindlabs/skript/9a4b484d2b5b`; vorhandene Dateien werden nie überschrieben. Vor jedem Lauf `sha256sum -c` gegen eine lokal aus dem Anker gebildete Zeile.
+
+Prüfsummen (SHA-256):
+
+| Datei | SHA-256 |
+|---|---|
+| skript/kl-mkt/pruefe_update.py | `9a4b484d2b5bab800b2f4c77a45e1a8ca8783de0e46bca10f27d38c05c2cb6e2` |
+| skript/kl-mkt/kl-mkt-de-update-pruefen.SKILL.md | `26c1e18dec108e4b37000fce715e40abce3acf552e4a5f885a3b6b6faa94da76` |
+| vorlagen/marketing/de/grundprompt-mkt-v1.0.0.md | `ce493aca24243f4a0c3bb13fc16d5a6f574f70a5e7e9e2d4a38dd55967319d41` |
+| vorlagen/marketing/de/manifest-kl-mkt.md | `4a4d334f80ac772810d7e128ce05af6b094236a859705f09c89b5eb8adae6b4c` |
+| vorlagen/marketing/de/payload-kl-mkt-v1.0.0.md | `735e133c96a27dcd6997e39d7b1f86892360d46653c0e332e1feff63f42b1205` |
+| vorlagen/marketing/de/manifest-kl-mkt-v1.0.1.md | `6e75c24421c1b2d5a7cef8190a29a3749b04abf2e094754de42cdc98afffc93d` |
+| vorlagen/marketing/de/payload-kl-mkt-v1.0.1.md | `a2347ae135053c37794e72470c30a47b1de9ce2207194580816d44c23bbfdd83` |
+
 ## Zugang und Notfallweg
 
 Änderungen an diesem Repository kommen nur über Pull Requests vom Bot-Konto
