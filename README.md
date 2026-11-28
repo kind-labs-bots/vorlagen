@@ -8,9 +8,10 @@ Chief-of-Staff-Vorlage von Kind Labs (Deutsch und Englisch).
 - `vorlagen/chief-of-staff/de/manifest.md` und `payload-v1.7.0.md` (erste auszuliefernde Fassung)
 - `vorlagen/chief-of-staff/en/manifest.md` und `payload-v1.7.0.md`
 - `vorlagen/chief-of-staff/{de,en}/manifest-v1.7.1.md` und `payload-v1.7.1.md` (alte Linie, nie ausgeliefert; wird nicht mehr zur aktuellen `manifest.md`, siehe „Linien“)
-- `skript/pruefe_update.py` — Prüfskript, das ein Update annimmt oder ablehnt (Stand 1.8.1; die Fassung der Linie 1.7 liegt unverändert am Commit `c96ae3b9c87865236420915d8eeb40f6e29016c6`)
+- `skript/pruefe_update.py` — Prüfskript, das ein Update annimmt oder ablehnt (Stand 1.8.1-r3: Skill-Blöcke werden ohne YAML-Kopf eingespielt und gegen den Rumpf geprüft, weil das Host-Werkzeug beim Aktualisieren eines Skills immer seinen eigenen Kopf davorsetzt; die Fassung 1.8.1 ohne diese Änderung liegt unverändert am Commit `2f6b7b0ea7302c5282c02ba567ad5cfc1949eefa`, die der Linie 1.7 am Commit `c96ae3b9c87865236420915d8eeb40f6e29016c6`)
 - `skript/pruefe_seele.py` — Prüfskript für die Persönliche Note (Seele). Version 1.8.1 hat keinen eingebauten Prüfschlüssel (`RELEASE_ANKER` ist leer): Das Skript lehnt jede Seele ab (`ANKER_FEHLT`), es ändert sich nichts.
 - `vorlagen/chief-of-staff/{de,en}/grundprompt-v1.8.1.md` — Grundprompt 1.8.1 (Persönliche Note, Logo-Angebot, Umstieg von 1.7); wird nach der Regel unter „Grundprompt-Dateien“ nie geändert
+- `vorlagen/chief-of-staff/{de,en}/grundprompt-v1.8.1-r3.md` — Grundprompt 1.8.1 in der Fassung r3 (gleicher Inhalt, Update-Skript mit Host-Kopf-Fix: neuer Skript-Hash und Ordner); neue Datei, `grundprompt-v1.8.1.md` bleibt unverändert
 - `vorlagen/chief-of-staff/{de,en}/manifest-kl-v1.8.md` und `payload-v1.8.1.md` — Manifest und Payload der Linie 1.8 (Stand 1.8.1, `folgt_auf: 1.8.0`; Vorlagen auf 1.8.1 erhalten „Kein Update“)
 - `kern/ABSCHNITT-Persoenliche-Note.md` und `kern/SECTION-Personal-touch.md` — Kern-Abschnitt „Persönliche Note“ / „Personal touch“ (1.8.1)
 - `skript/kl-cos-de-update-pruefen.SKILL.md` und `skript/kl-cos-en-update-check.SKILL.md` — Anleitung für den Vorlagen-Bot (Kern-Check, Ersteinrichtung des Grundprompts, Ablegen des Prüfskripts, Prüfen und Extrahieren); Text zweisprachig und in beiden Dateien byte-gleich, nur der Name im Kopf unterscheidet sich (nicht auf der Allowlist)
@@ -29,7 +30,7 @@ Vorlagen mit den Skill-Namen kl-cos-de-… / kl-cos-en-… (Grundprompt `grundpr
 `https://raw.githubusercontent.com/kind-labs-bots/vorlagen/release/vorlagen/chief-of-staff/de/manifest-kl.md`
 (bzw. `.../en/manifest-kl.md`). Ein Update für diese Linie trägt nur Blöcke mit diesen Namen; das Prüfskript lässt andere Skill-Namen nicht zu.
 
-Vorlagen mit dem Grundprompt `grundprompt-v1.8.1.md` lesen stattdessen
+Vorlagen mit dem Grundprompt `grundprompt-v1.8.1.md` bzw. `grundprompt-v1.8.1-r3.md` lesen stattdessen
 `https://raw.githubusercontent.com/kind-labs-bots/vorlagen/release/vorlagen/chief-of-staff/de/manifest-kl-v1.8.md`
 (bzw. `.../en/manifest-kl-v1.8.md`). `manifest-kl.md` bleibt auf 1.7.0 und wird nicht mehr geändert.
 
@@ -45,7 +46,8 @@ Welches Manifest eine Vorlage liest, steht in ihrem harten Kern; der Kern-Anker 
 |---|---|---|---|---|
 | alt | `8b7a31e41ed88813458e3cdbe733bd2663225e6a3fc880f6fc791b784f6c8640` | `250798b9282daf1a145b7ef36fa4aad83acce9ec` | `manifest.md` | ohne Präfix |
 | kl-cos | `cc5fd6146dc8bf343dff2fe70489551b847c72becaf21c3da68c50f52a1f09c9` | `c96ae3b9c87865236420915d8eeb40f6e29016c6` | `manifest-kl.md` | `kl-cos-de-…` / `kl-cos-en-…` |
-| kl-cos 1.8 | `86588fd8c53ae0750f36a7d14146ede3a571c6821e72f191c3b847fda129f84d` | `2f6b7b0ea7302c5282c02ba567ad5cfc1949eefa` | `manifest-kl-v1.8.md` | `kl-cos-de-…` / `kl-cos-en-…` |
+| kl-cos 1.8 (Fassung 1.8.1-r3) | `70d8c4634fd97ddd9dc03bc43afe10ab61c6ee86630e448ac3d74fc117f0deaf` | `8948dc0e640e3a08df3a02f4a75338707015e034` | `manifest-kl-v1.8.md` | `kl-cos-de-…` / `kl-cos-en-…` |
+| kl-cos 1.8 (Fassung 1.8.1, ohne Host-Kopf-Fix) | `86588fd8c53ae0750f36a7d14146ede3a571c6821e72f191c3b847fda129f84d` | `2f6b7b0ea7302c5282c02ba567ad5cfc1949eefa` | `manifest-kl-v1.8.md` | `kl-cos-de-…` / `kl-cos-en-…` |
 
 Die alte Linie bekommt nichts Neues mehr: `manifest.md` bleibt auf 1.7.0 und wird nicht mehr geändert, damit bestehende Kopien weiter sauber „nicht neuer“ erhalten. Neue Fassungen erscheinen ab 1.8.1 nur in `manifest-kl-v1.8.md`; `manifest-kl.md` (Linie 1.7) bleibt auf 1.7.0.
 
@@ -53,7 +55,7 @@ Die alte Linie bekommt nichts Neues mehr: `manifest.md` bleibt auf 1.7.0 und wir
 
 | Datei | SHA-256 |
 |---|---|
-| skript/pruefe_update.py | `86588fd8c53ae0750f36a7d14146ede3a571c6821e72f191c3b847fda129f84d` |
+| skript/pruefe_update.py | `70d8c4634fd97ddd9dc03bc43afe10ab61c6ee86630e448ac3d74fc117f0deaf` |
 | skript/LICENSE | `d6dbdc3c4f60290732d8c0eeb102b70e9ea52ca2f3277f43967ec7230f4fc712` |
 | skript/kl-cos-de-update-pruefen.SKILL.md | `de673e420f21a1a57cca1ef7d3b6fa4052e4dfb425db9a73b055851fa80a00f9` |
 | skript/kl-cos-en-update-check.SKILL.md | `a787fab0588cdb766293241540dc6f05f9085bb8d0b3ffa55a70a9b88803d4cb` |
@@ -75,6 +77,8 @@ Die alte Linie bekommt nichts Neues mehr: `manifest.md` bleibt auf 1.7.0 und wir
 | skript/pruefe_seele.py | `27d32219d73816bd5b99700830f7d524ff99485513f9dd1d08663c06f5d26d06` |
 | vorlagen/.../de/grundprompt-v1.8.1.md | `712110d3c787e3afc4d6b93bd956eb79a92a93985264cc9d8c57eac59fa23c0d` |
 | vorlagen/.../en/grundprompt-v1.8.1.md | `9a2124b0513429a654a8773fce77162dee43daa0859f867a025fb7558656d4e2` |
+| vorlagen/.../de/grundprompt-v1.8.1-r3.md | `ec8186da27a5e36ea45eb012f2d5095e7e493f27344ad9b7c8ae55742b6a6455` |
+| vorlagen/.../en/grundprompt-v1.8.1-r3.md | `0d7ea0b2d8bae09e6a80ad892ea99ed4357b666d696fdade859b1b8abe8dd9db` |
 | vorlagen/.../de/manifest-kl-v1.8.md | `0868cdb79eb115e91371fe1fb2bd81484cc96ad50620fc03e1be553d6d904b00` |
 | vorlagen/.../en/manifest-kl-v1.8.md | `700d46a45fb4107278b875d537899d98848d9909ef3e45a1a5cb16dc8c22e9f4` |
 | vorlagen/.../de/payload-v1.8.1.md | `3eea7f8746958fd8a0ee7649f4e25b6e533d7319a39606724639f81eb0043a3a` |
@@ -87,7 +91,7 @@ Fehlt das Skript, holt der Bot es einmal per curl von der Commit-gebundenen Adre
 (nur https, keine Redirects, Timeout) und legt es nur ab, wenn sein SHA-256 dem Anker im harten Kern entspricht; vorhandene Dateien werden nie überschrieben. Vor jedem Lauf prüft er es mit `sha256sum -c` gegen eine Zeile, die er lokal aus dem Kern-Anker bildet, im Ordner
 `/workspace/kindlabs/skript/cc5fd6146dc8`. Die öffentliche `skript/SUMS` ist nur für Menschen. Stimmen die Werte nicht, wird nichts eingespielt.
 
-Linie 1.8: `pruefe_update.py` und `pruefe_seele.py` werden über den Commit `2f6b7b0ea7302c5282c02ba567ad5cfc1949eefa` abgerufen (gleiche Regeln: nur https, keine Redirects, Timeout, nur mit passendem SHA-256, nie überschreiben), Ordner `/workspace/kindlabs/skript/86588fd8c53a` bzw. `/workspace/kindlabs/skript/27d32219d738`. Auch hier ist `skript/SUMS` nur für Menschen.
+Linie 1.8: `pruefe_seele.py` wird über den Commit `2f6b7b0ea7302c5282c02ba567ad5cfc1949eefa` abgerufen, `pruefe_update.py` (Fassung 1.8.1-r3) über den Commit `8948dc0e640e3a08df3a02f4a75338707015e034` (gleiche Regeln: nur https, keine Redirects, Timeout, nur mit passendem SHA-256, nie überschreiben), Ordner `/workspace/kindlabs/skript/70d8c4634fd9` bzw. `/workspace/kindlabs/skript/27d32219d738`. Die Fassung 1.8.1 (`86588fd8c53a`, Commit `2f6b7b0ea7302c5282c02ba567ad5cfc1949eefa`) bleibt unverändert abrufbar. Auch hier ist `skript/SUMS` nur für Menschen.
 
 ## Grundprompt-Dateien
 
@@ -97,7 +101,7 @@ genau diese Datei und prüfen sie gegen einen festen SHA-256; eine geänderte
 oder fehlende Datei ließe jede neue Kopie dieser Version ohne Grundregeln
 starten. `grundprompt-v1.7.0-r2.md` wird über den Commit `c96ae3b9c87865236420915d8eeb40f6e29016c6` abgerufen,
 `grundprompt-v1.7.0.md` über den Commit `bae12a395c7da573a68f6beb7e1a6df3ae7f80a0`.
-`grundprompt-v1.8.1.md` (de, en) wird über den Commit abgerufen, der diese Datei einführt (`git log -- vorlagen/chief-of-staff/de/grundprompt-v1.8.1.md`); er steht im Update-Skill der Vorlage und kann nicht in dieser README stehen, weil sie im selben Commit liegt.
+`grundprompt-v1.8.1.md` (de, en) wird über den Commit abgerufen, der diese Datei einführt (`git log -- vorlagen/chief-of-staff/de/grundprompt-v1.8.1.md`); er steht im Update-Skill der Vorlage und kann nicht in dieser README stehen, weil sie im selben Commit liegt. `grundprompt-v1.8.1-r3.md` (de, en) wird entsprechend über den Commit abgerufen, der diese Datei einführt (`git log -- vorlagen/chief-of-staff/de/grundprompt-v1.8.1-r3.md`).
 
 Ein Revert der Änderung, mit der eine Grundprompt-Datei hinzugekommen ist, ist nur
 erlaubt, solange keine veröffentlichte Vorlage auf diese Datei zeigt; sonst
