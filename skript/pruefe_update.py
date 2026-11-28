@@ -6,6 +6,14 @@ Does not fetch URLs, does not apply updates, does not follow redirects.
 Optional --extract writes applied block files into a new directory
 (via a temporary sibling, then rename) after a successful check.
 Exit 0 = accepted, 1 = rejected, 2 = usage error.
+
+r3 (Host-Kopf): Das Host-Werkzeug UpdateSkill schreibt IMMER seinen eigenen YAML-Kopf (name, description) vor den Inhalt eines Skills
+und uebernimmt den Inhalt woertlich; Inhalt mit eigenem Kopf ergibt einen Doppelkopf. Darum gilt fuer SKILL-Bloecke:
+  - angewendet = Rumpf ohne YAML-Kopf (Versionsmarke als Kommentar in Zeile 1), angewendet_sha256 = sha256 dieses Rumpfs;
+  - die Beschreibung steht getrennt (SKILL-<Name>-BESCHREIBUNG, beschreibung_sha256);
+  - die Pruefung der installierten SKILL.md vergleicht rumpf() (Text nach dem ersten Kopf) und die Beschreibung getrennt;
+    ein zweiter Kopf in der Datei ist ABWEICHUNG-KOPF (eigene Meldung, kein Konflikt).
+Zusatzmodi: --skill-zerlegen SKILL.md ZIEL (Sicherung als content.txt + description.txt), --skill-vergleichen SKILL.md CONTENT [DESCRIPTION].
 """
 from __future__ import annotations
 
@@ -279,6 +287,8 @@ class Block:
     basis_sha256: str
     angewendet: bytes
     angewendet_sha256: str
+    beschreibung: str | None = None  # r3: nur SKILL-Bloecke mit Kopf; norm()-Text
+    beschreibung_sha256: str | None = None
 
 
 @dataclass
@@ -490,7 +500,13 @@ def parse_blocks(tail: bytes, sprache: str, vorlage: str, version: str) -> list[
             check_content(SEELE_TOKENS.sub(b" ", body.replace(b"python3 -c '" + PS_CODE + b"'", b" ")), allow_placeholder=False, code="TEXT")
         else:
             check_content(body, allow_placeholder=True, code="TEXT")
-        applied = body.replace(ALLOWED_PLACEHOLDER, FORM_URL_BYTES)
+        beschr = None
+        if typ == "SKILL":
+            # r3: eingespielt wird nur der Rumpf ohne YAML-Kopf (der Host setzt seinen eigenen davor)
+            einspiel, beschr = skill_einspiel_form(body, vorlage, sprache, version)
+            applied = rumpf_bytes(einspiel.replace(ALLOWED_PLACEHOLDER, FORM_URL_BYTES).decode("utf-8"))
+        else:
+            applied = body.replace(ALLOWED_PLACEHOLDER, FORM_URL_BYTES)
         blocks.append(
             Block(
                 typ=typ,
@@ -499,6 +515,8 @@ def parse_blocks(tail: bytes, sprache: str, vorlage: str, version: str) -> list[
                 basis_sha256=sha256_hex(body),
                 angewendet=applied,
                 angewendet_sha256=sha256_hex(applied),
+                beschreibung=beschr,
+                beschreibung_sha256=sha256_hex(beschr.encode("utf-8")) if beschr is not None else None,
             )
         )
         pos = i
@@ -601,6 +619,102 @@ def check_skill_mark(body: bytes, vorlage: str, sprache: str, version: str, bloc
         fail("SKILL_MARK_MISSING")
     if b"\n---\n" in body or body.startswith(b"---"):
         fail("SKILL_FALLBACK_FRONTMATTER")
+
+
+# ---------------------------------------------------------------------------
+# r3: Host-Kopf. Das Host-Werkzeug (UpdateSkill) schreibt immer einen eigenen
+# YAML-Kopf vor den Inhalt eines Skills. Gemessen: der Inhalt wird woertlich
+# uebernommen, Inhalt mit eigenem Kopf ergibt einen Doppelkopf. Der Host
+# schreibt description je nach Text als Klartext, in einfachen Anfuehrungs-
+# zeichen ('...', Verdopplung '' fuer ') oder als gefalteten Block (>-).
+# ---------------------------------------------------------------------------
+def norm_ws(s: str) -> str:
+    return " ".join(s.split())
+
+
+def fm_lesen(block: str) -> dict[str, str]:
+    """Minimaler YAML-Leser fuer einen Kopfblock: Klartext, ' und " Anfuehrungszeichen, Blockskalare > und |."""
+    d: dict[str, str] = {}
+    z = block.split("\n")
+    i = 0
+    while i < len(z):
+        m = re.match(r"([A-Za-z_-]+):[ ]*(.*)$", z[i]) if not z[i].startswith(" ") else None
+        i += 1
+        if not m:
+            continue
+        k, v = m.group(1), m.group(2)
+        blk = v[:1] in (">", "|")
+        teile = [] if blk else [v]
+        while i < len(z) and (z[i].startswith(" ") or (z[i] == "" and blk)):
+            teile.append(z[i].strip())
+            i += 1
+        v = norm_ws(" ".join(teile))
+        if not blk and len(v) >= 2 and v[0] in ("'", '"') and v[-1] == v[0]:
+            v = v[1:-1].replace("''", "'") if v[0] == "'" else v[1:-1].replace('\\"', '"').replace("\\\\", "\\")
+        d[k] = norm_ws(v)
+    return d
+
+
+def fm_bloecke(t: str) -> list[dict[str, str]]:
+    t = t.replace("\r\n", "\n")
+    out: list[dict[str, str]] = []
+    while t.startswith("---\n"):
+        i = t.find("\n---\n", 3)
+        if i < 0:
+            break
+        out.append(fm_lesen(t[4:i]))
+        t = t[i + 5 :]
+    return out
+
+
+def kopf_doppelt(text: str) -> bool:
+    """True, wenn nach dem (hoechstens einen) Kopf des Host-Werkzeugs noch ein '---'-Kopf folgt (auch ungeschlossen)."""
+    t = text.replace("\r\n", "\n")
+    if t.startswith("---\n"):
+        i = t.find("\n---\n", 3)
+        if i >= 0:
+            t = t[i + 5 :]
+    r = t.lstrip()
+    return r.startswith("---\n") or r.rstrip() == "---"
+
+
+def rumpf_text(text: str) -> str:
+    """Text nach dem ersten Kopf (woertlich), CRLF zu LF, Rand-Whitespace entfernt. Ohne Kopf: der ganze Text."""
+    t = text.replace("\r\n", "\n")
+    if t.startswith("---\n"):
+        i = t.find("\n---\n", 3)
+        if i >= 0:
+            t = t[i + 5 :]
+    return t.strip()
+
+
+def skill_datei_zerlegen(data: bytes, name: str) -> tuple[str, str | None]:
+    """Installierte SKILL.md -> (rumpf, beschreibung oder None). Doppelkopf: ABWEICHUNG-KOPF."""
+    try:
+        text = data.decode("utf-8")
+    except UnicodeDecodeError:
+        fail("SKILL_UTF8", name)
+    if kopf_doppelt(text):
+        fail("ABWEICHUNG-KOPF", f"SKILL {name}")
+    b = fm_bloecke(text)
+    beschr = b[0].get("description") if b else None
+    return rumpf_text(text), beschr
+
+
+def skill_einspiel_form(body: bytes, vorlage: str, sprache: str, version: str) -> tuple[bytes, str | None]:
+    """SKILL-Block (mit Kopf oder Kommentar-Marke) -> (Rumpf ohne Kopf mit Marke als Kommentar in Zeile 1, Beschreibung)."""
+    if body.startswith(b"---\n"):
+        close = body.find(b"\n---\n", 4)
+        head = body[4:close]
+        fields = parse_frontmatter_fields(head)
+        rest = body[close + 5 :]
+        mark = f"<!-- kind-labs: {vorlage} {sprache} {version} -->\n".encode("ascii")
+        return mark + rest, norm_ws(fields["description"])
+    return body, None
+
+
+def rumpf_bytes(text: str) -> bytes:
+    return text.replace("\r\n", "\n").strip().encode("utf-8")
 
 
 def check_content(data: bytes, allow_placeholder: bool, code: str) -> None:
@@ -851,6 +965,11 @@ def alt_size(
     path = current_file(typ, name, aktuell_dir, skills_dir)
     if path is not None:
         size = path.stat().st_size
+        if typ == "SKILL":
+            try:  # r3: Vergleichsgroesse ist der Rumpf ohne Host-Kopf
+                size = len(skill_datei_zerlegen(path.read_bytes(), name)[0].encode("utf-8"))
+            except Reject:
+                pass
         return str(size), size, False
     label, mapping = basis_map_for(basis_version)
     basis = mapping.get((typ, name))
@@ -911,6 +1030,12 @@ def extract_blocks(result: Result, extract_dir: str, skip_names: set[tuple[str, 
                 fail("EXTRACT_PATH", str(path))
             atomic_write(path, block.angewendet)
             liste_lines.append(f"{fname} {block.angewendet_sha256}\n")
+            if block.typ == "SKILL" and block.beschreibung is not None:
+                bname = f"{fname}-BESCHREIBUNG"
+                if not FILENAME_SAFE_RE.fullmatch(bname) or bname == "LISTE.txt":
+                    fail("FILENAME", bname)
+                atomic_write((tmp_root / bname).resolve(), block.beschreibung.encode("utf-8"))
+                liste_lines.append(f"{bname} {block.beschreibung_sha256}\n")
         atomic_write(tmp_root / "LISTE.txt", "".join(liste_lines).encode("ascii"))
         try:
             os.rename(str(tmp_root), str(dest))
@@ -1031,6 +1156,8 @@ def format_ok(
     for b in result.blocks:
         lines.append(f"basis_sha256 {b.typ} {b.name} {b.basis_sha256}")
         lines.append(f"angewendet_sha256 {b.typ} {b.name} {b.angewendet_sha256}")
+        if b.beschreibung_sha256 is not None:
+            lines.append(f"beschreibung_sha256 {b.typ} {b.name} {b.beschreibung_sha256}")
         neu = len(b.angewendet)
         alt, alt_bytes, warn_fehlt = alt_size(
             aktuell_dir, b.typ, b.name, basis_version, skills_dir
@@ -1044,6 +1171,8 @@ def format_ok(
         if path is not None:
             try:
                 alt_text = path.read_bytes().decode("utf-8")
+                if b.typ == "SKILL":
+                    alt_text = rumpf_text(alt_text)
                 neu_text = b.angewendet.decode("utf-8")
             except UnicodeDecodeError:
                 alt_text = neu_text = ""
@@ -1116,6 +1245,13 @@ def build_parser() -> argparse.ArgumentParser:
         help="angewendet_sha256 from LISTE.txt or STATE (never basis_sha256) for a block under --aktuell or --aktuell-skills.",
     )
     p.add_argument(
+        "--angewendet-beschr",
+        action="append",
+        default=[],
+        metavar="SKILL/Name/SHA256",
+        help="r3: beschreibung_sha256 of the applied description (STATE line angewendet_beschreibung_sha256); optional, compared separately from the body.",
+    )
+    p.add_argument(
         "--wahl",
         action="append",
         default=[],
@@ -1138,7 +1274,69 @@ def build_parser() -> argparse.ArgumentParser:
     return p
 
 
+def modus_skill(argv: list[str]) -> int:
+    """--skill-zerlegen SKILL.md ZIEL | --skill-vergleichen SKILL.md CONTENT [DESCRIPTION] (r3, nur lesen bzw. neuer Ordner)."""
+    try:
+        modus = argv[0]
+        if modus == "--skill-zerlegen":
+            if len(argv) != 3:
+                fail("USAGE", "--skill-zerlegen SKILL.md ZIEL")
+            quelle, ziel = Path(argv[1]), Path(argv[2])
+            if not quelle.is_file():
+                fail("SKILL_FEHLT", str(quelle))
+            rumpf, beschr = skill_datei_zerlegen(quelle.read_bytes(), quelle.parent.name)
+            if ziel.exists():
+                fail("EXTRACT_EXISTS", str(ziel))
+            if not ziel.parent.is_dir():
+                fail("EXTRACT_PARENT", str(ziel.parent))
+            ziel.mkdir()
+            atomic_write(ziel / "content.txt", rumpf_bytes(rumpf))
+            if beschr is not None:
+                atomic_write(ziel / "description.txt", beschr.encode("utf-8"))
+            sys.stdout.write(
+                "KIND-LABS-SKILL/1 ZERLEGT\n"
+                f"content_sha256 {sha256_hex(rumpf_bytes(rumpf))}\n"
+                f"beschreibung_sha256 {sha256_hex(beschr.encode('utf-8')) if beschr is not None else 'fehlt'}\n"
+            )
+            return 0
+        if modus == "--skill-vergleichen":
+            if len(argv) not in (3, 4):
+                fail("USAGE", "--skill-vergleichen SKILL.md CONTENT [DESCRIPTION]")
+            quelle = Path(argv[1])
+            if not quelle.is_file():
+                fail("SKILL_FEHLT", str(quelle))
+            rumpf, beschr = skill_datei_zerlegen(quelle.read_bytes(), quelle.parent.name)
+            soll = Path(argv[2]).read_bytes().decode("utf-8")
+            if kopf_doppelt(soll) or soll.startswith("---\n"):
+                fail("ABWEICHUNG-KOPF", "CONTENT traegt selbst einen Kopf")
+            if rumpf_bytes(rumpf) != rumpf_bytes(soll):
+                fail("ABWEICHUNG-RUMPF", f"SKILL {quelle.parent.name}")
+            status = "nicht-geprueft"
+            if len(argv) == 4:
+                sd = norm_ws(Path(argv[3]).read_bytes().decode("utf-8"))
+                if beschr is None or beschr != sd:
+                    fail("ABWEICHUNG-BESCHREIBUNG", f"SKILL {quelle.parent.name}")
+                status = "ok"
+            sys.stdout.write(f"KIND-LABS-SKILL/1 OK rumpf={sha256_hex(rumpf_bytes(rumpf))} beschreibung={status}\n")
+            return 0
+        fail("USAGE", modus)
+    except Reject as exc:
+        sys.stderr.write(f"KIND-LABS-CHECK-FAIL/1 {exc.code}")
+        if exc.detail:
+            sys.stderr.write(f" {exc.detail}")
+        sys.stderr.write("\n")
+        return 1
+    except OSError as exc:
+        sys.stderr.write(f"KIND-LABS-CHECK-FAIL/1 IO {exc}\n")
+        return 1
+    return 2
+
+
 def main(argv: list[str] | None = None) -> int:
+    if argv is None:
+        argv = sys.argv[1:]
+    if argv and argv[0] in ("--skill-zerlegen", "--skill-vergleichen"):
+        return modus_skill(argv)
     try:
         args = build_parser().parse_args(argv)
     except SystemExit as exc:
@@ -1178,6 +1376,14 @@ def main(argv: list[str] | None = None) -> int:
             if (typ, name) in angew:
                 fail("USAGE", f"duplicate --angewendet {typ}/{name}")
             angew[(typ, name)] = digest
+        angew_b = {}
+        for raw in args.angewendet_beschr:
+            typ, name, digest = parse_block_ref(raw, "--angewendet-beschr")
+            if typ != "SKILL" or not SHA256_RE.fullmatch(digest):
+                fail("USAGE", f"--angewendet-beschr nur SKILL/Name/SHA256: {raw}")
+            if (typ, name) in angew_b:
+                fail("USAGE", f"duplicate --angewendet-beschr {typ}/{name}")
+            angew_b[(typ, name)] = digest
         wahl_map = {}
         for raw in args.wahl:
             typ, name, wert = parse_block_ref(raw, "--wahl")
@@ -1194,11 +1400,21 @@ def main(argv: list[str] | None = None) -> int:
             expected = angew.get(key)
             if expected is None:
                 fail("konflikt", f"{block.typ} {block.name} unbekannt")
-            actual = sha256_hex(path.read_bytes())
+            raw_live = path.read_bytes()
+            live_beschr = None
+            if block.typ == "SKILL":
+                # r3: Rumpf nach dem Host-Kopf vergleichen (nicht die ganze Datei); Doppelkopf = ABWEICHUNG-KOPF
+                live_rumpf, live_beschr = skill_datei_zerlegen(raw_live, block.name)
+                actual = sha256_hex(rumpf_bytes(live_rumpf))
+            else:
+                actual = sha256_hex(raw_live)
             if actual != expected:
                 wahl = wahl_map.get(key)
                 if wahl is None:
                     fail("konflikt", f"{block.typ} {block.name} hand")
+            elif block.typ == "SKILL" and key in angew_b and live_beschr is not None:
+                if sha256_hex(live_beschr.encode("utf-8")) != angew_b[key] and wahl_map.get(key) is None:
+                    fail("konflikt", f"{block.typ} {block.name} hand-beschreibung")
         # --wahl without a matching hand conflict is still logged, but cannot
         # bypass a missing --angewendet (handled above).
         kern = Path(args.kern_abschnitt) if args.kern_abschnitt else None
