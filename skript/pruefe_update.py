@@ -60,6 +60,8 @@ ALLOWED_SKILL = {
         "kl-cos-de-bereichs-landkarte",
         "kl-cos-de-erste-schritte",
         "kl-cos-de-katalog",
+        "kl-cos-de-logo-vorschlag",
+        "kl-cos-de-seele-pruefen",
     ),
     "en": (
         "kl-cos-en-morning-briefing",
@@ -70,9 +72,35 @@ ALLOWED_SKILL = {
         "kl-cos-en-area-map",
         "kl-cos-en-getting-started",
         "kl-cos-en-catalog",
+        "kl-cos-en-logo-proposal",
+        "kl-cos-en-soul-check",
     ),
 }
 ALLOWED_PLACEHOLDER = b"{{KIND-LABS-FORMULAR}}"
+# 1.8.1: Persoenliche Note (Seele) bleibt beim Vorlagen-Update unveraendert und wird
+# mit pruefe_seele.py notecheck neu geprueft (Review 1303e257 MUSS 5).
+SEELE_SKRIPT_SHA = "27d32219d73816bd5b99700830f7d524ff99485513f9dd1d08663c06f5d26d06"
+# Seele-Skill per Update (Review 9dd6bad7 SOLL 2): nur mit Pflichtsaetzen und exakt dieser PS-Zeile.
+SEELE_SKILLS = {"de": "kl-cos-de-seele-pruefen", "en": "kl-cos-en-soul-check"}
+PS_CODE = b'import hashlib,os,shutil,subprocess,sys,tempfile;b=open(sys.argv[1],"rb").read();(hashlib.sha256(b).hexdigest()==sys.argv[2]) or sys.exit(print("ABBRUCH-SKRIPT_HASH") or 1);d=tempfile.mkdtemp();p=os.path.join(d,"pruefe_seele.py");open(p,"wb").write(b);c=subprocess.call([sys.executable,p]+sys.argv[3:]);shutil.rmtree(d,ignore_errors=True);sys.exit(c)'  # enthaelt keine einfachen Anfuehrungszeichen
+SEELE_PFLICHT = {
+    "de": (b"Das Skript rufst du nie direkt auf", b"Nie mit --test-anker", b"python3 -c '" + PS_CODE + b"'"),
+    "en": (b"Never call the script directly", b"Never with --test-anker", b"python3 -c '" + PS_CODE + b"'"),
+}
+# Eng begrenzte Ausnahme vom Inhaltsfilter NUR fuer den Seele-Skill: genau diese Tokens werden vor
+# check_content durch ein Leerzeichen ersetzt; jede andere URL, Mail, Domain oder Nummer lehnt weiter ab.
+# Beidseitig verankert (Review-Endbefund 9b2b1669 MUSS 2): davor kein Wort-, Punkt-, Plus-, %-, @- oder
+# Bindestrich-Zeichen; danach kein Wort-, @-, :-, /-, ?-, #-, %- oder Bindestrich-Zeichen und kein Punkt,
+# auf den etwas anderes als Leerraum oder das Ende folgt (Satzende bleibt erlaubt). Die IDNA-Punkte
+# U+3002, U+FF0E und U+FF61 zaehlen wie "." (Review-Deltabefund 7f9f3992 KANN-1).
+SEELE_TOKENS = re.compile(
+    rb"(?<![A-Za-z0-9_.+%@-])(?:"
+    rb"https://raw\.githubusercontent\.com/kind-labs-bots/vorlagen/[0-9a-f]{40}/skript/pruefe_seele\.py"
+    rb"|kindlabs\.io@gmail\.com"
+    rb"|pruefe_seele\.py|pruefe_update\.py|STATE-SEELE\.txt|STATE\.txt|NOTE\.txt|BESCHREIBUNG(?:-OHNE-NOTE)?\.txt"
+    rb"|seele\.txt(?:\.sig)?|meta\.json|rechte\.json|profile\.json|kl-seele-PSEUDONYM\.txt(?:\.sig)?|vNEU\.txt|vNEW\.txt)"
+    rb"(?![A-Za-z0-9_@:/?#%-])(?!(?:\.|\xe3\x80\x82|\xef\xbc\x8e|\xef\xbd\xa1)\S)"
+)
 FORM_URL = "https://forms.gle/9YfEe9LwSar6Wqr7A"
 # Pflichtsätze (MUSS): an update that ships these sections must keep the
 # protection rules. Phrases are exact substrings, taken from Vorlage v1.6.
@@ -453,7 +481,15 @@ def parse_blocks(tail: bytes, sprache: str, vorlage: str, version: str) -> list[
         body = tail[body_start:body_end]
         if typ == "SKILL":
             check_skill_mark(body, vorlage, sprache, version, name)
-        check_content(body, allow_placeholder=True, code="TEXT")
+        if typ == "SKILL" and name == SEELE_SKILLS.get(sprache):
+            for phrase in SEELE_PFLICHT[sprache]:
+                if phrase not in body:
+                    fail("PFLICHTSATZ_SEELE", f"{name}: {phrase[:40].decode('utf-8', 'replace')}")
+            if body.count(b"python3 -c '") != 1:
+                fail("PFLICHTSATZ_SEELE", f"{name}: genau eine PS-Zeile")
+            check_content(SEELE_TOKENS.sub(b" ", body.replace(b"python3 -c '" + PS_CODE + b"'", b" ")), allow_placeholder=False, code="TEXT")
+        else:
+            check_content(body, allow_placeholder=True, code="TEXT")
         applied = body.replace(ALLOWED_PLACEHOLDER, FORM_URL_BYTES)
         blocks.append(
             Block(
@@ -1017,6 +1053,36 @@ def format_ok(
     return "\n".join(lines) + "\n"
 
 
+def note_pruefen(note_datei: str, note_state: str, seele_skript: str) -> tuple[str, str]:
+    """Return ("bleibt", "vN HASH12"), ("entfernt", "vN") or ("entfaellt", CODE). Never raises for a bad note:
+    a failing note means the update comes without the note (with notice)."""
+    import hashlib
+    import subprocess
+    import tempfile
+
+    try:
+        raw = Path(seele_skript).read_bytes()
+    except OSError:
+        fail("SEELE_SKRIPT", "nicht lesbar")
+    if hashlib.sha256(raw).hexdigest() != SEELE_SKRIPT_SHA:
+        fail("SEELE_SKRIPT_HASH")
+    with tempfile.TemporaryDirectory() as d:
+        kopie = Path(d) / "pruefe_seele.py"
+        kopie.write_bytes(raw)
+        r = subprocess.run(
+            [sys.executable, str(kopie), "notecheck", "--note", note_datei, "--seele-state", note_state],
+            capture_output=True, text=True, timeout=60,
+        )
+    me = re.fullmatch(r"NOTE ENTFERNT note_version=(\d{1,4})\n", r.stdout)
+    if r.returncode == 0 and me:
+        return "entfernt", f"v{me.group(1)}"  # F16: Nutzer hat die Note entfernt, sie bleibt draussen
+    m = re.fullmatch(r"NOTE OK note_version=(\d{1,4}) note_sha256=([0-9a-f]{64})\n", r.stdout)
+    if r.returncode == 0 and m:
+        return "bleibt", f"v{m.group(1)} {m.group(2)[:12]}"
+    code = (r.stdout.strip().split(" ")[0] or "ABBRUCH-UNBEKANNT")[:60]
+    return "entfaellt", code
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description="Validate a Kind Labs update pair.")
     p.add_argument("--manifest", required=True)
@@ -1066,6 +1132,9 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Shipped template version whose BASISGROESSEN to use (default: --active-version, 1.6.x falls back to 1.6.0).",
     )
+    p.add_argument("--note-datei", default=None, help="1.8.1: seele/aktiv/NOTE.txt")
+    p.add_argument("--note-state", default=None, help="1.8.1: seele/STATE-SEELE.txt")
+    p.add_argument("--seele-skript", default=None, help="1.8.1: pruefe_seele.py (Hash fest im Skript)")
     return p
 
 
@@ -1138,6 +1207,12 @@ def main(argv: list[str] | None = None) -> int:
         check_verweis(result.blocks, args.sprache, kern)
         wahlen = [(t, n, w) for (t, n), w in wahl_map.items()]
         skip = {(t, n) for (t, n), w in wahl_map.items() if w == "behalten"}
+        note_status = None
+        note_args = (args.note_datei, args.note_state, args.seele_skript)
+        if any(note_args) and not all(note_args):
+            fail("USAGE", "--note-datei, --note-state and --seele-skript together")
+        if all(note_args):
+            note_status = note_pruefen(*note_args)
         if args.extract is not None:
             extract_blocks(result, args.extract, skip_names=skip)
     except Reject as exc:
@@ -1150,7 +1225,29 @@ def main(argv: list[str] | None = None) -> int:
         sys.stderr.write(f"KIND-LABS-CHECK-FAIL/1 IO {exc}\n")
         return 1
     basis_v = args.basis_version or args.active_version
-    sys.stdout.write(format_ok(result, aktuell, basis_v, wahlen, skills_dir))
+    out = format_ok(result, aktuell, basis_v, wahlen, skills_dir)
+    skills = [b.name for b in result.blocks if b.typ == "SKILL"]
+    skill_text = ("; Skills: " + ", ".join(skills)) if skills else ""
+    if note_status is None:
+        out += "note: keine\n"
+        out += f"ja_text: Vorlage {result.version} ({result.payload_sha256[:12]}){skill_text}; keine Persoenliche Note\n"
+    elif note_status[0] == "bleibt":
+        out += f"note: bleibt {note_status[1]}\n"
+        v, h = note_status[1].split(" ")
+        out += (f"ja_text: Vorlage {result.version} ({result.payload_sha256[:12]}){skill_text}; "
+                f"Note {v} ({h}) bleibt unveraendert\n")
+        out += "g4: zusammengesetzt (pruefe_seele.py zusammensetzen nach Uebernahme)\n"
+    elif note_status[0] == "entfernt":
+        out += f"note: entfernt {note_status[1]}\n"
+        out += (f"ja_text: Vorlage {result.version} ({result.payload_sha256[:12]}){skill_text}; "
+                f"keine Persoenliche Note (von dir entfernt, bleibt entfernt)\n")
+        out += "g4: ohne-note-entfernt (pruefe_seele.py zusammensetzen --ohne-note, kein Hinweis zur Note)\n"
+    else:
+        out += f"note: entfaellt {note_status[1]}\n"
+        out += (f"ja_text: Vorlage {result.version} ({result.payload_sha256[:12]}){skill_text}; "
+                f"Persoenliche Note besteht die Pruefung nicht mehr ({note_status[1]}) und entfaellt\n")
+        out += "g4: ohne-note (pruefe_seele.py zusammensetzen --ohne-note)\n"
+    sys.stdout.write(out)
     return 0
 
 
